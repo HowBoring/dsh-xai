@@ -32,15 +32,20 @@ export function createXaiOAuthAdapter(
   reasoning?: ModelThinkingLevel,
 ): PiAiAdapter {
   return new PiAiAdapter({
-    profiles: () => new Map<string, ResolvedPiAiProviderProfile>([[XAI_OAUTH_ROUTE, {
-      provider: XAI_OAUTH_ROUTE,
-      displayName: 'xAI Grok',
-      streamIdleTimeoutMs: XAI_OAUTH_STREAM_IDLE_TIMEOUT_MS,
-      retryPolicy: resolveRetryPolicy(undefined, 'dsh-xai retryPolicy'),
-      configuredMaxTokens: new Map(),
-      piProvider: session.provider(),
-      ...reasoning === undefined ? {} : { reasoning },
-    }]]),
+    profiles: () => {
+      const profile = {
+        provider: XAI_OAUTH_ROUTE,
+        displayName: 'xAI Grok',
+        streamIdleTimeoutMs: XAI_OAUTH_STREAM_IDLE_TIMEOUT_MS,
+        retryPolicy: resolveRetryPolicy(undefined, 'dsh-xai retryPolicy'),
+        configuredMaxTokens: new Map(),
+        piProvider: session.provider(),
+        ...reasoning === undefined ? {} : { reasoning },
+      } satisfies ResolvedPiAiProviderProfile
+      // Newer pi-ai adapters consult per-model diagnostics during resolveModel;
+      // older profile declarations neither require nor reject this runtime field.
+      return new Map([[XAI_OAUTH_ROUTE, Object.assign(profile, { modelErrors: new Map<string, string>() })]])
+    },
     resolveApiKey: async () => {
       const auth = await session.models.getAuth(XAI_PI_PROVIDER)
       const apiKey = auth?.auth.apiKey

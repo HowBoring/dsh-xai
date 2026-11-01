@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getSupportedThinkingLevels } from '@earendil-works/pi-ai'
 import { xaiProvider } from '@earendil-works/pi-ai/providers/xai'
+import type { PiAiAdapterOptions } from '@deepseek-ai/dsh-llm-pi-ai'
 import { createXaiOAuthAdapter, preferredXaiOAuthModel } from '../src/adapter.ts'
 import { materializeLiveModel } from '../src/catalog.ts'
 import { DEFAULT_XAI_OAUTH_MODEL, XAI_OAUTH_ROUTE } from '../src/ids.ts'
@@ -39,6 +40,17 @@ describe('XaiOAuthSession.provider', () => {
 })
 
 describe('createXaiOAuthAdapter reasoning', () => {
+  it('supplies the model diagnostics required by current model selection', async () => {
+    const adapter = createXaiOAuthAdapter(new XaiOAuthSession(), () => undefined)
+    const options = (adapter as unknown as { config: PiAiAdapterOptions }).config
+    const profile = options.profiles().get(XAI_OAUTH_ROUTE) as { modelErrors?: ReadonlyMap<string, string> }
+    expect(profile.modelErrors).toBeInstanceOf(Map)
+    await expect(adapter.resolveModel(XAI_OAUTH_ROUTE, DEFAULT_XAI_OAUTH_MODEL)).resolves.toMatchObject({
+      provider: XAI_OAUTH_ROUTE,
+      id: DEFAULT_XAI_OAUTH_MODEL,
+    })
+  })
+
   it('omits a profile default when Config.reasoning is unset', async () => {
     const adapter = createXaiOAuthAdapter(new XaiOAuthSession(), () => undefined)
     const info = await adapter.resolveModel(XAI_OAUTH_ROUTE, DEFAULT_XAI_OAUTH_MODEL)
